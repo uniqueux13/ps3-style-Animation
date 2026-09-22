@@ -13,9 +13,7 @@ An interactive, high-fidelity replication of the legendary PlayStation®3 XMB (X
 - **Iconic Wave Animation**: A three-layer canvas-rendered wave system with distinct colors, line weights, frequencies, and speeds that capture the deep, fluid aesthetic of the original PS3 background.
 - **Dynamic Vignette**: A radial gradient overlay mimicking a classic television CRT display/console UI setup.
 - **Floating Particles**: Drifting boundary-faded particles designed to run infinitely without loop-reset snapping.
-- **Ambient Pad & Ocean Synth**: 
-  - **The Wave**: A custom white noise generator passed through a modulating bandpass filter (controlled by synchronous LFOs) to simulate ocean waves crashing and receding.
-  - **The String Chord**: An analog-style ambient synthesizer playing the classic open A Major 7 chord (A1, E3, C#4, E4, A4) using warm, filtered triangle waves, slow-evolving filter LFO sweeps, and deep detuned chorusing for a rich, breathing, cinematic texture.
+- **Procedural Ocean Wave Soundscape**: A custom white noise generator passed through a modulating bandpass filter (controlled by synchronous LFOs) to simulate ocean waves crashing and receding, offering a completely non-tonal, soothing, and relaxing ambient backdrop.
 - **Zero Dependencies**: Pure Vanilla HTML5, CSS3, and modern ES6 JavaScript. No bundlers, no npm, no heavy assets—just open and play!
 
 ---
@@ -48,9 +46,7 @@ $$y = A \sin(\omega_1 x + \phi_1) \cos(\theta) + B \cos(\omega_2 x - \phi_2) \si
 the animation maintains continuous flow without any abrupt jumps or cuts.
 
 ### Web Audio Synthesizer
-The sound is divided into two parts:
-1. **The Ocean Wave**: A procedural noise buffer modulating its frequency around a center bandpass cutoff of $500\text{Hz}$ via a slow $0.08\text{Hz}$ LFO.
-2. **The Ambient Strings**: An ensemble of 5 harmonically spaced oscillators using warm, organic triangle waves instead of static sines. These are modulated by continuous detuning (for lush chorusing) and a slow-evolving, sub-acoustic $0.04\text{Hz}$ LFO sweeping the low-pass filter cutoff to make the pad slowly "breathe" and eliminate headphone ear-fatigue or static humming.
+The audio system generates a **Procedural Ocean Wave**: a custom white noise buffer modulating its bandpass center cutoff frequency around $500\text{Hz}$ via a slow $0.08\text{Hz}$ LFO. This creates an infinite, non-tonal wave crash and recede simulation, preventing any ear-fatigue or static humming over long listening sessions.
 
 ---
 
