@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PS3 XMB True Wave Audio Engine</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100%; height: 100%; background-color: #050b18; overflow: hidden; font-family: sans-serif; }
+        canvas { display: block; width: 100vw; height: 100vh; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #audio-gate {
+            position: absolute; width: 100%; height: 100%; top: 0; left: 0;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            background: rgba(5, 11, 24, 0.85); z-index: 10; color: #ffffff;
+            cursor: pointer; transition: opacity 0.6s ease;
+        }
+        #audio-gate h1 { font-weight: 300; letter-spacing: 4px; margin-bottom: 10px; font-size: 24px; }
+        #audio-gate p { font-weight: 100; letter-spacing: 2px; color: #8899aa; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <div id="audio-gate">
+        <h1>PLAYSTATION®3</h1>
+        <p>Click Anywhere to Initialize System Audio</p>
+    </div>
+
+    <canvas id="xmbCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('xmbCanvas');
+        const ctx = canvas.getContext('2d');
+        const audioGate = document.getElementById('audio-gate');
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        const LOOP_DURATION = 10000; 
+
+        const particleCount = 60;
+        const particles = [];
+        for (let i = 0; i < particleCount; i++) {
+            particles.push({
+                x: Math.random(), y: Math.random(),
+                size: 1.0 + Math.random() * 1.8,
+                speed: 0.1 + Math.random() * 0.3, 
+                seed: Math.random() * Math.PI
+            });
+        }
+
+        // ---------------------------------------------------------------------
+        // --- Web Audio PS3 Wave & AMBIENT PAD Engine ---
+        // ---------------------------------------------------------------------
+        let audioCtx = null;
+
+        function startAmbientSynth() {
+            if (audioCtx) return; 
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            
+            const masterGain = audioCtx.createGain();
+            masterGain.gain.setValueAtTime(0.25, audioCtx.currentTime); 
+            masterGain.connect(audioCtx.destination);
+
+            // =================================================================
+            // PART A: THE OCEAN WAVE ENGINE
+            // =================================================================
+            
+            const bufferSize = audioCtx.sampleRate * 4; 
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2.0 - 1.0;
+            }
+
+            const noiseSource = audioCtx.createBufferSource();
+            noiseSource.buffer = noiseBuffer;
+            noiseSource.loop = true;
+
+            const waveFilter = audioCtx.createBiquadFilter();
+            waveFilter.type = "bandpass";
+            waveFilter.Q.setValueAtTime(1.5, audioCtx.currentTime); 
+
+            const waveGain = audioCtx.createGain();
+            waveGain.gain.setValueAtTime(0.12, audioCtx.currentTime); 
+
+            noiseSource.connect(waveFilter);
+            waveFilter.connect(waveGain);
+            waveGain.connect(masterGain);
+            noiseSource.start(0);
+
+            const filterLFO = audioCtx.createOscillator();
+            const filterLFOGain = audioCtx.createGain();
+            filterLFO.type = "sine";
+            filterLFO.frequency.setValueAtTime(0.08, audioCtx.currentTime); 
+            filterLFOGain.gain.setValueAtTime(300, audioCtx.currentTime); 
+            
+            filterLFO.connect(filterLFOGain);
+            waveFilter.frequency.setValueAtTime(500, audioCtx.currentTime); 
+            filterLFOGain.connect(waveFilter.frequency);
+            filterLFO.start(0);
+
+            const volumeLFO = audioCtx.createOscillator();
+            const volumeLFOGain = audioCtx.createGain();
+            volumeLFO.type = "sine";
+            volumeLFO.frequency.setValueAtTime(0.07, audioCtx.currentTime); 
+            volumeLFOGain.gain.setValueAtTime(0.06, audioCtx.currentTime); 
+            
+            volumeLFO.connect(volumeLFOGain);
+            waveGain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            volumeLFOGain.connect(waveGain.gain);
+            volumeLFO.start(0);
+
+            // =================================================================
+            // PART B: THE CLASSIC XMB STRING PAD CHORD
+            // =================================================================
+            const stringPadGain = audioCtx.createGain();
+            stringPadGain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+            
+            const lowpass = audioCtx.createBiquadFilter();
+            lowpass.type = "lowpass";
+            lowpass.frequency.setValueAtTime(600, audioCtx.currentTime); 
+            stringPadGain.connect(lowpass);
+            lowpass.connect(masterGain);
+
+            // Spaced out the chord: A1, E3, C#4, E4, A4 to avoid headphone mid-hum
+            const AMaj7Chord = [55.00, 164.81, 277.18, 329.63, 440.00];
+            
+            AMaj7Chord.forEach((freq, idx) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                
+                gain.gain.setValueAtTime(0.18 / (idx + 1), audioCtx.currentTime);
+                
+                osc.connect(gain);
+                gain.connect(stringPadGain);
+                osc.start(0);
+
+                const stringDetune = audioCtx.createOscillator();
+                const stringDetuneGain = audioCtx.createGain();
+                stringDetune.type = "sine";
+                stringDetune.frequency.setValueAtTime(0.03 + (idx * 0.015), audioCtx.currentTime);
+                stringDetuneGain.gain.setValueAtTime(8, audioCtx.currentTime); 
+                
+                stringDetune.connect(stringDetuneGain);
+                stringDetuneGain.connect(osc.detune);
+                stringDetune.start(0);
+            });
+        }
+
+        window.addEventListener('click', () => {
+            startAmbientSynth();
+            audioGate.style.opacity = '0';
+            setTimeout(() => audioGate.style.display = 'none', 600);
+        });
+
+        // ---------------------------------------------------------------------
+        // --- Graphics Rendering Thread Loop ---
+        // ---------------------------------------------------------------------
+        let lastTime = 0;
+        
+        function drawFrame(timestamp) {
+            // Delta time ensures continuous animation free from loop-reset snapping
+            if (!lastTime) lastTime = timestamp;
+            const deltaTime = timestamp - lastTime;
+            lastTime = timestamp;
+
+            const progress = (timestamp % LOOP_DURATION) / LOOP_DURATION;
+            const tAngle = progress * Math.PI * 2;
+
+            ctx.fillStyle = '#060c1c';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const vignette = ctx.createRadialGradient(canvas.width/2, canvas.height/2, 10, canvas.width/2, canvas.height/2, canvas.width);
+            vignette.addColorStop(0, 'rgba(0, 0, 0, 0)');
+            vignette.addColorStop(1, 'rgba(0, 0, 0, 0.65)');
+            
+            const midY = canvas.height * 0.5;
+            const step = 2;
+
+            const waveLayers = [
+                { color: 'rgba(35, 110, 255, 0.28)', width: 45, fX: 0.0025, amp1: 75, amp2: 25 },
+                { color: 'rgba(235, 25, 140, 0.20)', width: 28, fX: 0.0035, amp1: 55, amp2: 35 },
+                { color: 'rgba(255, 255, 255, 0.45)', width: 3.5, fX: 0.0030, amp1: 65, amp2: 15 }
+            ];
+
+            waveLayers.forEach((wave, idx) => {
+                ctx.beginPath();
+                ctx.lineWidth = wave.width;
+                ctx.strokeStyle = wave.color;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.filter = idx === 2 ? 'blur(1px)' : 'blur(8px)';
+
+                for (let x = 0; x <= canvas.width; x += step) {
+                    const waveA = Math.sin(x * wave.fX + (idx * 1.5)) * Math.cos(tAngle);
+                    const waveB = Math.cos(x * (wave.fX * 1.5) - (idx * 2.0)) * Math.sin(tAngle);
+                    const yOffset = (waveA * wave.amp1) + (waveB * wave.amp2);
+                    const slant = (x - canvas.width * 0.5) * 0.025;
+                    const drawY = midY + yOffset + slant;
+
+                    if (x === 0) ctx.moveTo(x, drawY);
+                    else ctx.lineTo(x, drawY);
+                }
+                ctx.stroke();
+            });
+
+            ctx.filter = 'none';
+            ctx.fillStyle = vignette;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            particles.forEach(p => {
+                // Update the true position continuously, unlinking dots from the 10-second loop
+                p.y -= (p.speed * (deltaTime / 10000));
+                if (p.y < 0) p.y += 1.0;
+                
+                const driftX = Math.sin(tAngle + p.seed) * 0.02;
+                let pX = (p.x + driftX) % 1.0;
+                if (pX < 0) pX += 1.0;
+                
+                const pixelX = pX * canvas.width;
+                const pixelY = p.y * canvas.height;
+                const boundaryAlpha = Math.sin(p.y * Math.PI);
+                
+                ctx.beginPath();
+                ctx.arc(pixelX, pixelY, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(255, 255, 255, ${boundaryAlpha * (0.12 + Math.sin(tAngle + p.seed) * 0.05)})`;
+                ctx.fill();
+            });
+            requestAnimationFrame(drawFrame);
+        }
+        requestAnimationFrame(drawFrame);
+    </script>
+</body>
+</html>
