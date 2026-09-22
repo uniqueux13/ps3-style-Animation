@@ -15,7 +15,7 @@ An interactive, high-fidelity replication of the legendary PlayStation®3 XMB (X
 - **Floating Particles**: Drifting boundary-faded particles designed to run infinitely without loop-reset snapping.
 - **Ambient Pad & Ocean Synth**: 
   - **The Wave**: A custom white noise generator passed through a modulating bandpass filter (controlled by synchronous LFOs) to simulate ocean waves crashing and receding.
-  - **The String Chord**: An analog-style ambient synthesizer playing the classic open A Major 7 chord (A1, E3, C#4, E4, A4) with sine detuning for deep space and texture.
+  - **The String Chord**: An analog-style ambient synthesizer playing the classic open A Major 7 chord (A1, E3, C#4, E4, A4) using warm, filtered triangle waves, slow-evolving filter LFO sweeps, and deep detuned chorusing for a rich, breathing, cinematic texture.
 - **Zero Dependencies**: Pure Vanilla HTML5, CSS3, and modern ES6 JavaScript. No bundlers, no npm, no heavy assets—just open and play!
 
 ---
@@ -50,7 +50,7 @@ the animation maintains continuous flow without any abrupt jumps or cuts.
 ### Web Audio Synthesizer
 The sound is divided into two parts:
 1. **The Ocean Wave**: A procedural noise buffer modulating its frequency around a center bandpass cutoff of $500\text{Hz}$ via a slow $0.08\text{Hz}$ LFO.
-2. **The Ambient Strings**: Oscillators playing five harmonically spaced sine waves with minute phase offsets to achieve a lush, organic chorusing effect.
+2. **The Ambient Strings**: An ensemble of 5 harmonically spaced oscillators using warm, organic triangle waves instead of static sines. These are modulated by continuous detuning (for lush chorusing) and a slow-evolving, sub-acoustic $0.04\text{Hz}$ LFO sweeping the low-pass filter cutoff to make the pad slowly "breathe" and eliminate headphone ear-fatigue or static humming.
 
 ---
 

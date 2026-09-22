@@ -123,21 +123,33 @@
             
             const lowpass = audioCtx.createBiquadFilter();
             lowpass.type = "lowpass";
-            lowpass.frequency.setValueAtTime(600, audioCtx.currentTime); 
+            lowpass.frequency.setValueAtTime(380, audioCtx.currentTime); // Set warm, dark baseline cutoff
             stringPadGain.connect(lowpass);
             lowpass.connect(masterGain);
 
-            // Spaced out the chord: A1, E3, C#4, E4, A4 to avoid headphone mid-hum
+            // Slow-evolving lowpass filter sweep LFO to make the pad "breathe" over time
+            const padFilterLFO = audioCtx.createOscillator();
+            const padFilterLFOGain = audioCtx.createGain();
+            padFilterLFO.type = "sine";
+            padFilterLFO.frequency.setValueAtTime(0.04, audioCtx.currentTime); // Ultra slow: 25s sweep
+            padFilterLFOGain.gain.setValueAtTime(130, audioCtx.currentTime); // Modulate cutoff by +/- 130Hz
+            padFilterLFO.connect(padFilterLFOGain);
+            padFilterLFOGain.connect(lowpass.frequency);
+            padFilterLFO.start(0);
+
+            // Spaced out the chord: A1, E3, C#4, E4, A4
             const AMaj7Chord = [55.00, 164.81, 277.18, 329.63, 440.00];
             
             AMaj7Chord.forEach((freq, idx) => {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
                 
-                osc.type = "sine";
+                // Using triangle wave to introduce warm, organic harmonics instead of static sines
+                osc.type = "triangle";
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
                 
-                gain.gain.setValueAtTime(0.18 / (idx + 1), audioCtx.currentTime);
+                // Re-balance gains for triangle wave harmonics
+                gain.gain.setValueAtTime(0.15 / (idx + 1), audioCtx.currentTime);
                 
                 osc.connect(gain);
                 gain.connect(stringPadGain);
@@ -146,8 +158,8 @@
                 const stringDetune = audioCtx.createOscillator();
                 const stringDetuneGain = audioCtx.createGain();
                 stringDetune.type = "sine";
-                stringDetune.frequency.setValueAtTime(0.03 + (idx * 0.015), audioCtx.currentTime);
-                stringDetuneGain.gain.setValueAtTime(8, audioCtx.currentTime); 
+                stringDetune.frequency.setValueAtTime(0.02 + (idx * 0.012), audioCtx.currentTime);
+                stringDetuneGain.gain.setValueAtTime(16, audioCtx.currentTime); // Deepen detune to 16 cents for rich chorusing
                 
                 stringDetune.connect(stringDetuneGain);
                 stringDetuneGain.connect(osc.detune);
